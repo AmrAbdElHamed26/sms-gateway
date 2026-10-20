@@ -1,0 +1,103 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Optional SMS module. Requested at runtime only when the operator enables it.
+         Incoming SMS only: the app never reads the inbox, sends, or deletes SMS. -->
+    <uses-permission android:name="android.permission.RECEIVE_SMS" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- Expedited work on Android 11 and below runs as a brief foreground service. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <!-- Sideloaded app: lets the operator exempt the gateway from Doze. -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <!-- Heartbeat every 2 min through Doze (HeartbeatScheduler). USE_EXACT_ALARM is granted at
+         install on 13+ (fine for a sideloaded app; Play restricts it to alarm/calendar apps);
+         on 12 SCHEDULE_EXACT_ALARM is granted by default. -->
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" android:maxSdkVersion="32" />
+
+    <application
+        android:label="Payment Gateway"
+        android:name="${applicationName}"
+        android:icon="@mipmap/ic_launcher"
+        android:allowBackup="false"
+        android:fullBackupContent="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:networkSecurityConfig="@xml/network_security_config"
+        android:usesCleartextTraffic="false">
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:taskAffinity=""
+            android:theme="@style/LaunchTheme"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize">
+            <meta-data
+              android:name="io.flutter.embedding.android.NormalTheme"
+              android:resource="@style/NormalTheme"
+              />
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+
+        <!-- Notification module. Android binds it once the operator grants
+             Notification Access in system settings; no Accessibility permission. -->
+        <service
+            android:name=".capture.notification.PaymentNotificationListener"
+            android:label="Payment Gateway"
+            android:exported="true"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+            <!-- Payment alerts can be posted silently; progress (ongoing) ones are useless. -->
+            <meta-data
+                android:name="android.service.notification.default_filter_types"
+                android:value="conversations|alerting|silent" />
+        </service>
+
+        <!-- Optional SMS module: disabled until the operator enables it (SmsModule.sync).
+             BROADCAST_SMS guard: only the telephony stack can deliver to it. -->
+        <receiver
+            android:name=".capture.sms.SmsReceiver"
+            android:enabled="false"
+            android:exported="true"
+            android:permission="android.permission.BROADCAST_SMS">
+            <intent-filter>
+                <action android:name="android.provider.Telephony.SMS_RECEIVED" />
+            </intent-filter>
+        </receiver>
+
+        <receiver
+            android:name=".delivery.HeartbeatAlarmReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".delivery.BootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+
+        <meta-data
+            android:name="flutterEmbedding"
+            android:value="2" />
+    </application>
+    <queries>
+        <!-- Lists launchable apps for the "Monitored apps" picker, without QUERY_ALL_PACKAGES. -->
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.PROCESS_TEXT"/>
+            <data android:mimeType="text/plain"/>
+        </intent>
+    </queries>
+</manifest>
